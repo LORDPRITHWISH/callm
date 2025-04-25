@@ -4,15 +4,15 @@ export default function GradientText({
     colors = ["#40ffaa, #4079ff, #40ffaa, #4079ff, #40ffaa"],
     animationSpeed = 8,
     showBorder = false,
-    size = "default", // Added size prop with default value
+    size = "default", 
   }) {
     const gradientStyle = {
       backgroundImage: `linear-gradient(to right, ${colors.join(", ")})`,
       animationDuration: `${animationSpeed}s`,
     };
   
-    // Define text size classes based on the size prop
-    let sizeClass = "text-3xl md:text-4xl font-bold"; // Default size
+ 
+    let sizeClass = "text-3xl md:text-4xl font-bold"; 
   
     if (size === "large") {
       sizeClass = "text-4xl md:text-5xl lg:text-6xl font-bold";

@@ -16,7 +16,7 @@ export const Spotlight = ({
 } = {}) => {
   return (
     <div className="relative">
-      {/* The spotlight effect */}
+      
       <motion.div
         initial={{
           opacity: 0,
