@@ -87,7 +87,7 @@ const Home = () => {
             </Magnet> */}
 
             {/* <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-blue-200 to-blue-100">
-              Find Peace with <span className="text-blue-400">calm</span>
+              Find Peace with <span className="text-blue-400">callm</span>
             </h1> */}
             <Spotlight>
             Find Peace with <span className="text-blue-400">callm</span>
@@ -121,10 +121,10 @@ const Home = () => {
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             {/* <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              How <span className="text-blue-400">calm</span> Supports You
+              How <span className="text-blue-400">callm</span> Supports You
             </h2> */}
             <GradientText size="large">
-              How calm Supports You
+              How callm Supports You
             </GradientText>
             <p className="text-gray-400 max-w-2xl mx-auto">
               Our AI companion uses advanced technology to provide personalized
@@ -187,10 +187,10 @@ const Home = () => {
         <div className="container relative z-10 mx-auto px-4">
           <div className="text-center mb-16">
             {/* <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              How <span className="text-blue-400">calm</span> Works
+              How <span className="text-blue-400">callm</span> Works
             </h2> */}
             <h1 className="text-3xl font-bold tracking-tighter md:text-5xl lg:text-6xl ">
-              How <AuroraText>calm </AuroraText> Works
+              How <AuroraText>callm </AuroraText> Works
             </h1>
             <p className="text-gray-400 max-w-2xl mx-auto">
               Our advanced AI learns from your interactions to provide
@@ -248,7 +248,7 @@ const Home = () => {
                 href="#"
                 className="flex items-center gap-1 font-bold text-white"
               >
-                <span className="text-2xl">calm</span>
+                <span className="text-2xl">callm</span>
                 <span className="text-blue-400 text-xl">★</span>
               </Link>
               <p className="text-gray-400 text-sm mt-2">
