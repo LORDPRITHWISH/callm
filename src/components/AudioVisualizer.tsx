@@ -1,10 +1,38 @@
-import { useEffect, useRef, useState } from "react";
+"use client";
+
+import { useRef, useState, useEffect, useMemo } from "react";
+import { Canvas, extend, useFrame, useThree } from "@react-three/fiber";
+import { PerspectiveCamera } from "@react-three/drei";
+import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
+import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 import * as THREE from "three";
-import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer";
-import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass";
-import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass";
-import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass";
-import { GUI } from "dat.gui";
+import { useControls, Leva } from "leva";
+
+// Extend R3F with postprocessing effects
+extend({ EffectComposer, RenderPass, UnrealBloomPass, OutputPass });
+
+// Define interfaces for our controls and props
+interface BloomSettings {
+  threshold: number;
+  strength: number;
+  radius: number;
+}
+
+interface ColorSettings {
+  red: number;
+  green: number;
+  blue: number;
+}
+
+interface EffectsProps {
+  bloom: BloomSettings;
+}
+
+interface AudioSphereProps {
+  audioUrl: string;
+}
 
 interface SoundVisualizerProps {
   audioUrl?: string;
@@ -12,6 +40,12 @@ interface SoundVisualizerProps {
   height?: number;
 }
 
+interface MousePosition {
+  x: number;
+  y: number;
+}
+
+// Vertex shader for audio-reactive geometry
 const vertexShader = `
   uniform float u_time;
 
@@ -119,6 +153,7 @@ const vertexShader = `
   }
 `;
 
+// Fragment shader for coloring the geometry
 const fragmentShader = `
   uniform float u_red;
   uniform float u_green;
@@ -128,205 +163,222 @@ const fragmentShader = `
   }
 `;
 
-const SoundVisualizer: React.FC<SoundVisualizerProps> = ({ audioUrl = "/assets/Beats.mp3", width = window.innerWidth, height = window.innerHeight }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
+// Effects and post-processing setup
+function Effects({ bloom }: EffectsProps): JSX.Element {
+  const { gl, scene, camera, size } = useThree();
+  const composer = useRef<EffectComposer>(null);
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (composer.current) {
+      composer.current.setSize(size.width, size.height);
+    }
+  }, [size]);
 
-    // Setup scene
-    const scene = new THREE.Scene();
+  useFrame(() => {
+    if (composer.current) {
+      composer.current.render();
+    }
+  }, 1);
 
-    // Setup camera
-    const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
-    camera.position.set(0, -2, 14);
-    camera.lookAt(0, 0, 0);
+  return (
+    <effectComposer ref={composer} args={[gl]}>
+      <renderPass attach="passes" args={[scene, camera]} />
+      <UnrealBloomPass attachArray="passes" args={[new THREE.Vector2(size.width, size.height), bloom.strength, bloom.radius, bloom.threshold]} />
+      <outputPass attachArray="passes" />
+    </effectComposer>
+  );
+}
 
-    // Setup renderer
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(width, height);
-    renderer.outputColorSpace = THREE.SRGBColorSpace;
-    containerRef.current.appendChild(renderer.domElement);
+// Audio reactive geometry
+function AudioSphere({ audioUrl }: AudioSphereProps): JSX.Element {
+  const meshRef = useRef<THREE.Mesh>(null);
+  const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  const [frequency, setFrequency] = useState<number>(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
 
-    // Post-processing
-    const params = {
-      red: 1.0,
-      green: 1.0,
-      blue: 1.0,
-      threshold: 0.5,
-      strength: 0.5,
-      radius: 0.8,
+  interface ControlSettings {
+    colorSettings: {
+      red: number;
+      green: number;
+      blue: number;
     };
-
-    const renderScene = new RenderPass(scene, camera);
-    const bloomPass = new UnrealBloomPass(new THREE.Vector2(width, height));
-    bloomPass.threshold = params.threshold;
-    bloomPass.strength = params.strength;
-    bloomPass.radius = params.radius;
-
-    const bloomComposer = new EffectComposer(renderer);
-    bloomComposer.addPass(renderScene);
-    bloomComposer.addPass(bloomPass);
-
-    const outputPass = new OutputPass();
-    bloomComposer.addPass(outputPass);
-
-    // Shader uniforms
-    const uniforms = {
-      u_time: { type: "f", value: 0.0 },
-      u_frequency: { type: "f", value: 0.0 },
-      u_red: { type: "f", value: params.red },
-      u_green: { type: "f", value: params.green },
-      u_blue: { type: "f", value: params.blue },
+    bloomSettings: {
+      threshold: number;
+      strength: number;
+      radius: number;
     };
+  }
 
-    // Create mesh
-    const material = new THREE.ShaderMaterial({
-      uniforms,
+  const controls = useControls({
+    colorSettings: {
+      red: { min: 0, max: 1, step: 0.01 },
+      green: { min: 0, max: 1, step: 0.01 },
+      blue: { min: 0, max: 1, step: 0.01 },
+    },
+    bloomSettings: {
+      threshold: { value: 0.5, min: 0, max: 1, step: 0.01 },
+      strength: { value: 0.5, min: 0, max: 3, step: 0.01 },
+      radius: { value: 0.8, min: 0, max: 1, step: 0.01 },
+    },
+  });
+
+  const colorSettings = controls.colorSettings;
+  // Removed unused bloomSettings declaration
+
+  // Initialize audio analysis
+  useEffect(() => {
+    // Create audio context
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    const audioContext = new AudioContext();
+
+    // Create audio element and source
+    const audio = new Audio(audioUrl);
+    audio.crossOrigin = "anonymous";
+    audioRef.current = audio;
+
+    // Connect to analyzer
+    const source = audioContext.createMediaElementSource(audio);
+    const analyser = audioContext.createAnalyser();
+    analyser.fftSize = 64;
+    source.connect(analyser);
+    analyser.connect(audioContext.destination);
+    analyserRef.current = analyser;
+
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+      audioContext.close();
+    };
+  }, [audioUrl]);
+
+  // Handle audio playback
+  const togglePlayback = (): void => {
+    if (!audioRef.current) return;
+
+    if (isPlaying) {
+      audioRef.current.pause();
+    } else {
+      audioRef.current.play();
+    }
+    setIsPlaying(!isPlaying);
+  };
+
+  // Update uniforms based on audio data
+  useFrame(({ clock }) => {
+    if (!meshRef.current?.material || !analyserRef.current) return;
+
+    const material = meshRef.current.material as THREE.ShaderMaterial;
+
+    // Update time uniform
+    material.uniforms.u_time.value = clock.getElapsedTime();
+
+    // Update audio frequency uniform
+    if (isPlaying && analyserRef.current) {
+      const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
+      analyserRef.current.getByteFrequencyData(dataArray);
+      const average = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+      setFrequency(average);
+      material.uniforms.u_frequency.value = average;
+    }
+
+    // Smooth rotation
+    if (meshRef.current) {
+      meshRef.current.rotation.y += 0.002;
+    }
+  });
+
+  // Create shader material with uniforms
+  const shaderMaterial = useMemo(() => {
+    return new THREE.ShaderMaterial({
+      uniforms: {
+        u_time: { value: 0.0 },
+        u_frequency: { value: frequency },
+        u_red: { value: colorSettings.red },
+        u_green: { value: colorSettings.green },
+        u_blue: { value: colorSettings.blue },
+      },
       vertexShader,
       fragmentShader,
       wireframe: true,
     });
+  }, [colorSettings.red, colorSettings.green, colorSettings.blue, frequency]);
 
-    const geometry = new THREE.IcosahedronGeometry(4, 30);
-    const mesh = new THREE.Mesh(geometry, material);
-    scene.add(mesh);
+  // Update color uniforms when controls change
+  useEffect(() => {
+    if (meshRef.current?.material) {
+      const material = meshRef.current.material as THREE.ShaderMaterial;
+      material.uniforms.u_red.value = colorSettings.red;
+      material.uniforms.u_green.value = colorSettings.green;
+      material.uniforms.u_blue.value = colorSettings.blue;
+    }
+  }, [colorSettings]);
 
-    // Audio setup
-    const listener = new THREE.AudioListener();
-    camera.add(listener);
-    const sound = new THREE.Audio(listener);
-    const audioLoader = new THREE.AudioLoader();
+  return (
+    <mesh ref={meshRef} material={shaderMaterial} onClick={togglePlayback}>
+      <icosahedronGeometry args={[4, 30]} />
+    </mesh>
+  );
+}
 
-    let analyser: THREE.AudioAnalyser | null = null;
+function SoundVisualizer({ audioUrl = "/assets/Beats.mp3", width = 800, height = 600 }: SoundVisualizerProps): JSX.Element {
+  const [mousePosition, setMousePosition] = useState<MousePosition>({ x: 0, y: 0 });
 
-    audioLoader.load(audioUrl, (buffer) => {
-      sound.setBuffer(buffer);
-      analyser = new THREE.AudioAnalyser(sound, 32);
+  // Handle mouse movement for camera interaction
+  const handleMouseMove = (e: MouseEvent): void => {
+    const windowHalfX = window.innerWidth / 2;
+    const windowHalfY = window.innerHeight / 2;
+    setMousePosition({
+      x: (e.clientX - windowHalfX) / 100,
+      y: (e.clientY - windowHalfY) / 100,
     });
+  };
 
-    // GUI setup
-    const gui = new GUI({ autoPlace: false });
-    const guiContainer = document.createElement("div");
-    guiContainer.style.position = "absolute";
-    guiContainer.style.top = "0";
-    guiContainer.style.right = "0";
-    containerRef.current.appendChild(guiContainer);
-    guiContainer.appendChild(gui.domElement);
-
-    const colorsFolder = gui.addFolder("Colors");
-    colorsFolder.add(params, "red", 0, 1).onChange((value) => {
-      uniforms.u_red.value = Number(value);
-    });
-    colorsFolder.add(params, "green", 0, 1).onChange((value) => {
-      uniforms.u_green.value = Number(value);
-    });
-    colorsFolder.add(params, "blue", 0, 1).onChange((value) => {
-      uniforms.u_blue.value = Number(value);
-    });
-
-    const bloomFolder = gui.addFolder("Bloom");
-    bloomFolder.add(params, "threshold", 0, 1).onChange((value) => {
-      bloomPass.threshold = Number(value);
-    });
-    bloomFolder.add(params, "strength", 0, 3).onChange((value) => {
-      bloomPass.strength = Number(value);
-    });
-    bloomFolder.add(params, "radius", 0, 1).onChange((value) => {
-      bloomPass.radius = Number(value);
-    });
-
-    // Mouse interaction
-    let mouseX = 0;
-    let mouseY = 0;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const windowHalfX = width / 2;
-      const windowHalfY = height / 2;
-      mouseX = (e.clientX - windowHalfX) / 100;
-      mouseY = (e.clientY - windowHalfY) / 100;
-    };
-
-    document.addEventListener("mousemove", handleMouseMove);
-
-    // Handle window resize
-    const handleResize = () => {
-      if (!containerRef.current) return;
-
-      const newWidth = containerRef.current.clientWidth;
-      const newHeight = containerRef.current.clientHeight;
-
-      camera.aspect = newWidth / newHeight;
-      camera.updateProjectionMatrix();
-
-      renderer.setSize(newWidth, newHeight);
-      bloomComposer.setSize(newWidth, newHeight);
-    };
-
-    window.addEventListener("resize", handleResize);
-
-    // Animation loop
-    const clock = new THREE.Clock();
-
-    const animate = () => {
-      camera.position.x += (mouseX - camera.position.x) * 0.05;
-      camera.position.y += (-mouseY - camera.position.y) * 0.5;
-      camera.lookAt(scene.position);
-
-      uniforms.u_time.value = clock.getElapsedTime();
-
-      if (analyser) {
-        uniforms.u_frequency.value = analyser.getAverageFrequency();
-      }
-
-      bloomComposer.render();
-      requestAnimationFrame(animate);
-    };
-
-    animate();
-
-    // Toggle play/pause
-    const togglePlay = () => {
-      if (sound && sound.isPlaying) {
-        sound.pause();
-        setIsPlaying(false);
-      } else if (sound && sound.buffer) {
-        sound.play();
-        setIsPlaying(true);
-      }
-    };
-
-    containerRef.current.addEventListener("click", togglePlay);
-
-    // Cleanup
+  useEffect(() => {
+    window.addEventListener("mousemove", handleMouseMove);
     return () => {
-      if (containerRef.current) {
-        containerRef.current.removeChild(renderer.domElement);
-        if (gui.domElement.parentElement) {
-          containerRef.current.removeChild(gui.domElement.parentElement);
-        }
-      }
-      window.removeEventListener("resize", handleResize);
-      document.removeEventListener("mousemove", handleMouseMove);
-      if (containerRef.current) {
-        containerRef.current.removeEventListener("click", togglePlay);
-      }
-      gui.destroy();
-      geometry.dispose();
-      material.dispose();
-      renderer.dispose();
+      window.removeEventListener("mousemove", handleMouseMove);
     };
-  }, [audioUrl, height, width]);
+  }, []);
+
+  // Custom camera that responds to mouse movement
+  function CameraRig(): null {
+    const { camera } = useThree();
+
+    useFrame(() => {
+      camera.position.x += (mousePosition.x - camera.position.x) * 0.05;
+      camera.position.y += (-mousePosition.y - camera.position.y) * 0.5;
+      camera.lookAt(0, 0, 0);
+    });
+
+    return null;
+  }
+
+  const { bloomSettings } = useControls({
+    bloomSettings: {
+      threshold: { value: 0.5, min: 0, max: 1, step: 0.01 },
+      strength: { value: 0.5, min: 0, max: 3, step: 0.01 },
+      radius: { value: 0.8, min: 0, max: 1, step: 0.01 },
+    },
+  });
 
   return (
     <div className="relative w-full h-full">
-      <div ref={containerRef} className="w-full h-full" />
+      <Canvas style={{ width, height }}>
+        <PerspectiveCamera makeDefault position={[0, -2, 14]} />
+        <CameraRig />
+        <AudioSphere audioUrl={audioUrl} />
+        <Effects bloom={bloomSettings} />
+      </Canvas>
       <div className="absolute bottom-4 left-4 bg-black bg-opacity-50 p-2 rounded">
-        <p className="text-white">{isPlaying ? "Playing" : "Click To Play"}</p>
+        <p className="text-white">Click the Sphere to Toggle Sound</p>
+      </div>
+      <div className="absolute top-4 right-4">
+        <Leva collapsed />
       </div>
     </div>
   );
-};
+}
 
 export default SoundVisualizer;
