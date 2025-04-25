@@ -21,6 +21,7 @@ export default function MentalHealthSurvey({ questions, previousAnswers, onCompl
   const [answers, setAnswers] = useState<string[]>([]);
   const [direction, setDirection] = useState(1);
   const [isCompleted, setIsCompleted] = useState(false);
+  const [isReviewMode, setIsReviewMode] = useState(false);
   const totalSteps = questions.length;
 
   const getNextUnansweredQuestion = React.useCallback(() => {
@@ -29,8 +30,8 @@ export default function MentalHealthSurvey({ questions, previousAnswers, onCompl
         return i + 1;
       }
     }
-    return currentStep;
-  }, [answers, questions, currentStep]);
+    return totalSteps;
+  }, [answers, questions, totalSteps]);
 
   useEffect(() => {
     if (previousAnswers) {
@@ -39,6 +40,14 @@ export default function MentalHealthSurvey({ questions, previousAnswers, onCompl
     }
   }, [previousAnswers, getNextUnansweredQuestion]);
 
+  // When the current step changes, check if we're in review mode
+  useEffect(() => {
+    // We're in review mode if looking at a previously answered question
+    // and it's not the next question to be answered
+    // const nextUnanswered = getNextUnansweredQuestion();
+    // setIsReviewMode(answers[currentStep - 1] !== undefined && currentStep !== nextUnanswered);
+  }, [currentStep, answers, getNextUnansweredQuestion]);
+
   // Calculate completion percentage
   const completionPercentage = (answers.filter((a) => a !== undefined).length / totalSteps) * 100;
 
@@ -46,6 +55,7 @@ export default function MentalHealthSurvey({ questions, previousAnswers, onCompl
     const newAnswers = [...answers];
     newAnswers[currentStep - 1] = selectedAnswer;
     setAnswers(newAnswers);
+    setIsReviewMode(false);
 
     // Automatically advance to next question
     setTimeout(() => {
@@ -60,9 +70,18 @@ export default function MentalHealthSurvey({ questions, previousAnswers, onCompl
   };
 
   const handleStepChange = (step: number) => {
-    if (step <= totalSteps) {
+    // Only allow navigation to answered questions or the next unanswered question
+    const nextUnanswered = getNextUnansweredQuestion();
+    if (step < nextUnanswered || step === nextUnanswered) {
       setDirection(step > currentStep ? 1 : -1);
       setCurrentStep(step);
+
+      // If it's a previous question that was already answered, we're in review mode
+      if (answers[step - 1] !== undefined && step !== nextUnanswered) {
+        setIsReviewMode(true);
+      } else {
+        setIsReviewMode(false);
+      }
     }
   };
 
@@ -70,6 +89,14 @@ export default function MentalHealthSurvey({ questions, previousAnswers, onCompl
   const goToNextUnanswered = () => {
     const nextStep = getNextUnansweredQuestion();
     handleStepChange(nextStep);
+    setIsReviewMode(false);
+  };
+
+  // Determine if we can navigate to a specific step
+  const isStepNavigable = (step: number) => {
+    // Can only navigate to already answered questions or the next unanswered one
+    const nextUnanswered = getNextUnansweredQuestion();
+    return step < nextUnanswered || step === nextUnanswered;
   };
 
   return (
@@ -97,10 +124,11 @@ export default function MentalHealthSurvey({ questions, previousAnswers, onCompl
             {questions.map((_, idx) => {
               const stepNum = idx + 1;
               const isAnswered = answers[idx] !== undefined;
+              const canNavigate = isStepNavigable(stepNum);
 
               return (
                 <React.Fragment key={stepNum}>
-                  <StepIndicator step={stepNum} currentStep={currentStep} isAnswered={isAnswered} onClickStep={handleStepChange} />
+                  <StepIndicator step={stepNum} currentStep={currentStep} isAnswered={isAnswered} onClickStep={handleStepChange} isNavigable={canNavigate} />
 
                   {idx < questions.length - 1 && <ProgressConnector isCompleted={isAnswered} />}
                 </React.Fragment>
@@ -124,14 +152,20 @@ export default function MentalHealthSurvey({ questions, previousAnswers, onCompl
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
                 className="w-full mx-auto p-8"
               >
-                <Question questionData={questions[currentStep - 1]} onAnswerSelect={handleAnswerSelect} questionNumber={currentStep} selectedAnswer={answers[currentStep - 1]} />
+                <Question
+                  questionData={questions[currentStep - 1]}
+                  onAnswerSelect={handleAnswerSelect}
+                  questionNumber={currentStep}
+                  selectedAnswer={answers[currentStep - 1]}
+                  isReviewMode={isReviewMode}
+                />
               </motion.div>
             </AnimatePresence>
           </div>
         )}
 
-        {/* Review Banner - shows when viewing already answered questions */}
-        {answers[currentStep - 1] !== undefined && !isCompleted && (
+        {/* Review Banner - only shows in review mode */}
+        {isReviewMode && !isCompleted && (
           <div
             className="bg-gradient-to-r from-cyan-50 via-teal-50 to-cyan-50 border-t border-teal-100 p-3 flex justify-between items-center z-50 relative"
             style={{ boxShadow: "0 0 10px rgba(79, 209, 197, 0.2)" }}
@@ -188,9 +222,10 @@ interface QuestionProps {
   onAnswerSelect: (selectedAnswer: string) => void;
   questionNumber: number;
   selectedAnswer: string | undefined;
+  isReviewMode: boolean;
 }
 
-function Question({ questionData, onAnswerSelect, questionNumber, selectedAnswer }: QuestionProps) {
+function Question({ questionData, onAnswerSelect, questionNumber, selectedAnswer, isReviewMode }: QuestionProps) {
   const { question, options, category } = questionData;
 
   return (
@@ -248,17 +283,32 @@ function Question({ questionData, onAnswerSelect, questionNumber, selectedAnswer
 }
 
 // Step Indicator Component with simplified effects
-function StepIndicator({ step, currentStep, isAnswered, onClickStep }: { step: number; currentStep: number; isAnswered: boolean; onClickStep: (step: number) => void }) {
+function StepIndicator({
+  step,
+  currentStep,
+  isAnswered,
+  onClickStep,
+  isNavigable,
+}: {
+  step: number;
+  currentStep: number;
+  isAnswered: boolean;
+  onClickStep: (step: number) => void;
+  isNavigable: boolean;
+}) {
   let bgColor = "bg-white"; // Default unanswered
   let textColor = "text-gray-400";
   let borderColor = "border-gray-300";
   let glowEffect = "";
+  let opacity = isNavigable ? "opacity-100" : "opacity-50";
+  let cursor = isNavigable ? "cursor-pointer" : "cursor-not-allowed";
 
   if (step === currentStep) {
     bgColor = "bg-teal-500";
     textColor = "text-white";
     borderColor = "border-teal-600";
     glowEffect = "0 0 8px rgba(79, 209, 197, 0.7)";
+    opacity = "opacity-100";
   } else if (isAnswered) {
     bgColor = "bg-teal-100";
     textColor = "text-teal-700";
@@ -266,10 +316,16 @@ function StepIndicator({ step, currentStep, isAnswered, onClickStep }: { step: n
     glowEffect = "0 0 4px rgba(79, 209, 197, 0.4)";
   }
 
+  const handleClick = () => {
+    if (isNavigable) {
+      onClickStep(step);
+    }
+  };
+
   return (
     <div
-      onClick={() => onClickStep(step)}
-      className={`flex items-center justify-center h-8 w-8 rounded-full border-2 ${borderColor} ${bgColor} ${textColor} cursor-pointer`}
+      onClick={handleClick}
+      className={`flex items-center justify-center h-8 w-8 rounded-full border-2 ${borderColor} ${bgColor} ${textColor} ${cursor} ${opacity}`}
       style={{ boxShadow: glowEffect }}
     >
       {isAnswered ? <CheckIcon className="h-4 w-4" /> : <span className="text-sm">{step}</span>}
