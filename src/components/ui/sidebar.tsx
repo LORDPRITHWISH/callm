@@ -186,7 +186,13 @@
 //     </a>
 //   );
 // };
-
+import {
+  SignInButton,
+  SignUpButton,
+  SignedIn,
+  SignedOut,
+  UserButton,
+} from '@clerk/nextjs'
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 interface NavItem {
@@ -198,7 +204,7 @@ const navItems: NavItem[] = [
   { label: 'Home', href: '/' },
   { label: 'About', href: '/about' },
   { label: 'Features', href: '/features' },
-  { label: 'Community', href: '/Community' },
+  { label: 'Community', href: '/community' },
   { label: 'Contact', href: '/contact' },
 ];
 
@@ -281,11 +287,25 @@ const Navbar: React.FC = () => {
                 {item.label}
               </a>
             ))}
-            <button className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors duration-200">
+            <SignedOut>
+            <SignInButton>
+            <span className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors duration-200">
+              Sign In
+            </span>
+            </SignInButton>
+
+            <SignUpButton>
+            <span className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors duration-200">
               Sign Up
-            </button>
+            </span>
+            </SignUpButton>
+            </SignedOut>
+            <SignedIn>
+              <UserButton afterSwitchSessionUrl='/'/>
+            </SignedIn>
           </nav>
-          
+        {/* Mobile menu button */}
+
           <div className="md:hidden flex items-center">
             <button
               onClick={toggleMenu}
@@ -306,7 +326,7 @@ const Navbar: React.FC = () => {
           </div>
         </div>
       </div>
-      
+      {/* Mobile Navigation Menu */}
 
       <div className={`md:hidden bg-white absolute w-full shadow-md transition-transform duration-300 ease-in-out ${isMenuOpen ? 'transform translate-y-0' : 'transform -translate-y-full opacity-0'}`}>
         <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
@@ -320,9 +340,21 @@ const Navbar: React.FC = () => {
             </a>
           ))}
           <div className="px-4 py-4">
-            <button className="w-full bg-blue-600 text-white px-4 py-2 rounded-md text-base font-medium hover:bg-blue-700 transition-colors duration-200">
+            <SignedOut>
+            <SignInButton>
+            <span className="w-full bg-blue-600 text-white px-4 py-2 rounded-md text-base font-medium hover:bg-blue-700 transition-colors duration-200">
+              Sign In
+            </span>
+            </SignInButton>
+            <SignUpButton>
+            <span className="w-full bg-blue-600 text-white px-4 py-2 rounded-md text-base font-medium hover:bg-blue-700 transition-colors duration-200">
               Sign Up
-            </button>
+            </span>
+            </SignUpButton>
+            </SignedOut>
+            <SignedIn>
+              <UserButton afterSwitchSessionUrl='/'/>
+            </SignedIn>
           </div>
         </div>
       </div>
