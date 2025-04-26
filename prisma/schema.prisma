@@ -9,17 +9,16 @@ datasource db {
 }
 
 model User {
-  id                String        @id @default(cuid())
-  userId            String        @unique
+  id                String         @id @default(cuid())
+  userId            String         @unique
   name              String?
-  email             String?       @unique
+  email             String?        @unique
   avatar            String?
-  isSarveyCompleted Boolean?      @default(false)
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
+  isSarveyCompleted Boolean?       @default(false)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
   UserAnswer        UserAnswer[]
   Analysis          Analysis[]
-  ChatMessage       ChatMessage[]
 }
 
 model Question {
@@ -57,22 +56,4 @@ model Analysis {
   User User @relation(fields: [userId], references: [id])
 
   @@index([userId])
-}
-
-model ChatMessage {
-  id        String   @id @default(cuid())
-  userId    String
-  message   String
-  role      Role
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  User User @relation(fields: [userId], references: [id])
-
-  @@index([userId])
-}
-
-enum Role {
-  user
-  bot
 }
