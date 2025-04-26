@@ -5,6 +5,7 @@ import Link from "next/link";
 
 // Main Quiz Component
 interface Question {
+  id: string; // Added ID field for each question
   question: string;
   options: string[];
   correctAnswer: string;
@@ -12,13 +13,17 @@ interface Question {
 
 interface RPGQuizProps {
   questions: Question[];
-  previousanswers?: string[];
-  onComplete?: (answers: string[]) => void;
+  previousAnswers?: Record<string, string>; // Changed from array to object with id keys
+  onComplete?: (answers: Record<string, string>) => void; // Changed return type
 }
 
-export default function RPGQuiz({ questions, previousanswers, onComplete = () => {} }: RPGQuizProps) {
+export default function RPGQuiz({ 
+  questions, 
+  previousAnswers = {}, 
+  onComplete = () => {} 
+}: RPGQuizProps) {
   const [currentStep, setCurrentStep] = useState(1);
-  const [answers, setAnswers] = useState<string[]>([]);
+  const [answers, setAnswers] = useState<Record<string, string>>({}); // Changed from array to object
   const [direction, setDirection] = useState(1);
   const [isCompleted, setIsCompleted] = useState(false);
   const [isReviewMode, setIsReviewMode] = useState(false);
@@ -26,7 +31,7 @@ export default function RPGQuiz({ questions, previousanswers, onComplete = () =>
 
   const getNextUnansweredQuestion = React.useCallback(() => {
     for (let i = 0; i < questions.length; i++) {
-      if (answers[i] === undefined) {
+      if (!answers[questions[i].id]) {
         return i + 1;
       }
     }
@@ -34,19 +39,21 @@ export default function RPGQuiz({ questions, previousanswers, onComplete = () =>
   }, [answers, questions, totalSteps]);
 
   useEffect(() => {
-    if (previousanswers) {
-      setAnswers(previousanswers);
+    if (previousAnswers && Object.keys(previousAnswers).length > 0) {
+      setAnswers(previousAnswers);
       setCurrentStep(getNextUnansweredQuestion());
     }
-  }, [previousanswers, getNextUnansweredQuestion]);
+  }, [previousAnswers, getNextUnansweredQuestion]);
 
   // Calculate completion percentage
-  const completionPercentage = (answers.filter((a) => a !== undefined).length / totalSteps) * 100;
+  const completionPercentage = (Object.keys(answers).length / totalSteps) * 100;
 
   const handleAnswerSelect = (selectedAnswer: string) => {
-    const newAnswers = [...answers];
-    newAnswers[currentStep - 1] = selectedAnswer;
-    setAnswers(newAnswers);
+    const questionId = questions[currentStep - 1].id;
+    setAnswers(prev => ({
+      ...prev,
+      [questionId]: selectedAnswer
+    }));
     setIsReviewMode(false);
 
     // Automatically advance to next question
@@ -56,7 +63,7 @@ export default function RPGQuiz({ questions, previousanswers, onComplete = () =>
         setCurrentStep((prev) => prev + 1);
       } else {
         setIsCompleted(true);
-        onComplete(newAnswers);
+        onComplete(answers);
       }
     }, 600);
   };
@@ -69,7 +76,8 @@ export default function RPGQuiz({ questions, previousanswers, onComplete = () =>
       setCurrentStep(step);
 
       // If it's a previous question that was already answered, we're in review mode
-      if (answers[step - 1] !== undefined && step !== nextUnanswered) {
+      const questionId = questions[step - 1].id;
+      if (answers[questionId] !== undefined && step !== nextUnanswered) {
         setIsReviewMode(true);
       } else {
         setIsReviewMode(false);
@@ -115,7 +123,8 @@ export default function RPGQuiz({ questions, previousanswers, onComplete = () =>
           <div className="flex items-center justify-center space-x-2">
             {questions.map((_, idx) => {
               const stepNum = idx + 1;
-              const isAnswered = answers[idx] !== undefined;
+              const questionId = questions[idx].id;
+              const isAnswered = answers[questionId] !== undefined;
               const canNavigate = isStepNavigable(stepNum);
 
               return (
@@ -148,7 +157,7 @@ export default function RPGQuiz({ questions, previousanswers, onComplete = () =>
                   questionData={questions[currentStep - 1]}
                   onAnswerSelect={handleAnswerSelect}
                   questionNumber={currentStep}
-                  selectedAnswer={answers[currentStep - 1]}
+                  selectedAnswer={answers[questions[currentStep - 1].id]}
                   isReviewMode={isReviewMode}
                 />
               </motion.div>
@@ -342,7 +351,10 @@ function ProgressConnector({ isCompleted }: { isCompleted: boolean }) {
 }
 
 // Quiz Complete Screen
-function QuizComplete({ answers, questions }: { answers: string[]; questions: Question[] }) {
+function QuizComplete({ answers, questions }: { answers: Record<string, string>; questions: Question[] }) {
+  // Calculate score
+  const correctCount = questions.filter(q => answers[q.id] === q.correctAnswer).length;
+  
   return (
     <div className="py-12 px-8 text-center relative">
       <h1 className="text-3xl font-bold text-blue-100 mb-6" style={{ textShadow: "0 0 10px rgba(99, 102, 241, 0.3)" }}>
@@ -403,7 +415,8 @@ function QuizComplete({ answers, questions }: { answers: string[]; questions: Qu
 
           <div className="space-y-4">
             {questions.map((question, idx) => {
-              const isCorrect = answers[idx] === question.correctAnswer;
+              const userAnswer = answers[question.id];
+              const isCorrect = userAnswer === question.correctAnswer;
               return (
                 <div 
                   key={idx} 
@@ -413,7 +426,7 @@ function QuizComplete({ answers, questions }: { answers: string[]; questions: Qu
                 >
                   <p className="text-sm text-blue-200 font-medium">{question.question}</p>
                   <div className="mt-2 text-sm flex justify-between">
-                    <span className="text-blue-300">Your answer: <span className={isCorrect ? 'text-green-400' : 'text-red-400'}>{answers[idx]}</span></span>
+                    <span className="text-blue-300">Your answer: <span className={isCorrect ? 'text-green-400' : 'text-red-400'}>{userAnswer}</span></span>
                     {!isCorrect && <span className="text-green-400">Correct answer: {question.correctAnswer}</span>}
                   </div>
                 </div>
@@ -426,7 +439,7 @@ function QuizComplete({ answers, questions }: { answers: string[]; questions: Qu
             <div className="flex justify-between items-center">
               <span className="text-blue-200 font-medium">Total Score:</span>
               <span className="text-xl font-bold text-blue-100">
-                {questions.filter((q, idx) => answers[idx] === q.correctAnswer).length} / {questions.length}
+                {correctCount} / {questions.length}
               </span>
             </div>
           </div>
