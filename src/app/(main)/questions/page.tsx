@@ -72,7 +72,7 @@ export default function Home() {
           </div>
         ) : (
           <div className="flex flex-col items-center w-full bg-transparent text-white font-sans">
-            <h1 className="text-4xl font-bold mb-3 mt-8">Welcome to TryHard</h1>
+            <h1 className="text-4xl font-bold mb-3 mt-8">Welcome to Callm</h1>
             <p className="text-lg mb-8">Explore the wonders of Knowledge!</p>
             {questions.length > 0 && (
               <RPGQuiz
