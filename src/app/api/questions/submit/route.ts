@@ -62,7 +62,8 @@ export async function POST(request: Request) {
     });
     // ]);
 
-    return NextResponse.json({ analysis, message: "anaylsis fetched successfully", result, text }, { status: 200 });
+    // return NextResponse.json({ analysis, message: "anaylsis fetched successfully", result, text }, { status: 200 });
+    return NextResponse.json({ analysis, message: "anaylsis fetched successfully" }, { status: 200 });
   } catch (error) {
     console.log("Error generating analysis:", error);
     return NextResponse.json({ message: "Error generating analysis" }, { status: 500 });
