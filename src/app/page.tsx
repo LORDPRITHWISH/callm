@@ -9,9 +9,10 @@ import { Spotlight } from "@/components/ui/spotlight-new";
 import  GradientText  from "@/components/GradientText";
 import {AuroraText} from "@/components//ui/aurora-text";
 import Navbar from "@/components/ui/sidebar";
+import { useRouter } from "next/navigation";
 const Home = () => {
   const heroRef = useRef(null);
-
+  const rout=useRouter()
   useEffect(() => {
     const handleScroll = () => {
       const scrollPosition = window.scrollY;
@@ -98,9 +99,11 @@ const Home = () => {
               needs, providing comfort and connection when you need it most.
             </p>
             {/* <a href="https://drive.google.com/file/d/1Lf50V5_5wYuGk0eLQsYkgom6kB55zQmY/view?usp=sharing" target="_blank" rel="noopener noreferrer"> */}
-            <RainbowButton>
+            <RainbowButton 
+              onClick={() => rout.push("/questions")}
+            >
               Get Started
-              </RainbowButton>
+            </RainbowButton>
             {/* </a> */}
             
             <div className="flex flex-col sm:flex-row justify-center gap-4 w-full max-w-md">

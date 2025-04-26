@@ -53,7 +53,7 @@ export default function Home() {
       );
       console.log("submission response:", response.data);
       toast.success("Initiation submitted successfully!");
-      router.push("/chat");
+      router.push("/summary");
     } catch (error) {
       console.error("Failed to submit quiz", error);
       toast.error("Quiz submission failed!");
