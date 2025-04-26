@@ -12,8 +12,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [questions, setQuestions] = useState([]);
 
-    const router = useRouter();
-  
+  const router = useRouter();
 
   // Dummy quiz data
   useEffect(() => {
@@ -42,29 +41,27 @@ export default function Home() {
   }, []);
 
   const quizSubmissionHandler = async (answers: string[]) => {
-    console.log("Quiz submitted with answers:", answers);
+    console.log("User answers:", answers);
     try {
       setLoading(true);
       const response = await axios.post(
-        "/api/quiz/submit",
+        "/api/questions/submit",
         { answers },
         {
           withCredentials: true,
         }
       );
-      console.log("Quiz submission response:", response.data);
-      toast.success("Quiz submitted successfully!");
+      console.log("submission response:", response.data);
+      toast.success("Initiation submitted successfully!");
     } catch (error) {
       console.error("Failed to submit quiz", error);
       toast.error("Quiz submission failed!");
     } finally {
-      setLoading(false);
-      router.push("/chat");
-      
+      // setLoading(false);
+      // router.push("/chat");
     }
   };
-    // Simulate API call delay
-  
+  // Simulate API call delay
 
   return (
     <main className="min-h-screen bg-black text-white font-sans">
