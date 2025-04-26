@@ -53,12 +53,11 @@ export default function Home() {
       );
       console.log("submission response:", response.data);
       toast.success("Initiation submitted successfully!");
+      router.push("/chat");
     } catch (error) {
       console.error("Failed to submit quiz", error);
       toast.error("Quiz submission failed!");
-    } finally {
-      // setLoading(false);
-      // router.push("/chat");
+      setLoading(false);
     }
   };
   // Simulate API call delay

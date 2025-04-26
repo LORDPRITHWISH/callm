@@ -55,5 +55,4 @@ model Analysis {
 
   User User @relation(fields: [userId], references: [id])
 
-  @@index([userId])
 }

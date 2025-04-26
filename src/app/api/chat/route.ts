@@ -20,7 +20,14 @@ export async function POST(req: Request) {
   });
 
   if (!analysis) {
+<<<<<<< Updated upstream
     return NextResponse.json({ message: "No analysis found for user" }, { status: 404 });
+=======
+    return NextResponse.json(
+      { message: "No analysis found for user" },
+      { status: 404 }
+    );
+>>>>>>> Stashed changes
   }
 
   const result = streamText({
