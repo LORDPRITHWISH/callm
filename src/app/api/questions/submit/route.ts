@@ -45,6 +45,7 @@ export async function POST(request: Request) {
     if (!analysis.rating || !analysis.traits) {
       return NextResponse.json({ message: "Error parsing response" }, { status: 500 });
     }
+    
     // await prisma.$transaction([
     await prisma.analysis.create({
       data: {
