@@ -14,12 +14,18 @@ import { MessageCircle, Send, Loader2, Volume2, VolumeX } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function Chat() {
-  const { messages, input, handleInputChange, handleSubmit, isLoading } =
-    useChat();
+  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat();
   const messagesEndRef = useRef(null);
   const chatContainerRef = useRef(null);
   const [speaking, setSpeaking] = useState(false);
   const [speakingMessageId, setSpeakingMessageId] = useState(null);
+
+  // Preload voices when available
+  useEffect(() => {
+    window.speechSynthesis.onvoiceschanged = () => {
+      window.speechSynthesis.getVoices();
+    };
+  }, []);
 
   // Scroll to bottom whenever messages change
   useEffect(() => {
@@ -30,21 +36,28 @@ export default function Chat() {
 
   // Handle speech synthesis
   const handleSpeak = (text, messageId) => {
-    // If already speaking, stop it
     if (speaking) {
       window.speechSynthesis.cancel();
       setSpeaking(false);
       setSpeakingMessageId(null);
-      
-      // If clicking on the same message that's already speaking, just stop
+
       if (speakingMessageId === messageId) {
         return;
       }
     }
 
-    // Start speaking the new text
     const utterance = new SpeechSynthesisUtterance(text);
-    
+
+    const voices = window.speechSynthesis.getVoices();
+    const selectedVoice = voices.find(voice => voice.lang.startsWith('en')) || voices[0];
+    if (selectedVoice) {
+      utterance.voice = selectedVoice;
+    }
+
+    utterance.rate = 1;
+    utterance.pitch = 1;
+    utterance.volume = 1;
+
     utterance.onend = () => {
       setSpeaking(false);
       setSpeakingMessageId(null);
