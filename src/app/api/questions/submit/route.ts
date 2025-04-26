@@ -8,7 +8,10 @@ export async function POST(request: Request) {
   const { userId } = await auth();
   console.log(userId);
   if (!userId) {
-    return NextResponse.json({ message: "User not authenticated" }, { status: 401 });
+    return NextResponse.json(
+      { message: "User not authenticated" },
+      { status: 401 }
+    );
   }
   try {
     const questions = await prisma.question.findMany();
@@ -25,7 +28,9 @@ export async function POST(request: Request) {
     - Don't include any markdown or code fences
 
     Questions and Answers:
-    ${questions.map((q) => `${q.question} - ${answers[q.id] || "No answer"}`).join("\n")}
+    ${questions
+      .map((q) => `${q.question} - ${answers[q.id] || "No answer"}`)
+      .join("\n")}
 
     Response format:
     {
@@ -43,14 +48,22 @@ export async function POST(request: Request) {
     const analysis = JSON.parse(text);
 
     if (!analysis.rating || !analysis.traits) {
-      return NextResponse.json({ message: "Error parsing response" }, { status: 500 });
+      return NextResponse.json(
+        { message: "Error parsing response" },
+        { status: 500 }
+      );
     }
-    
+    console.log(userId);
+    console.log(typeof userId);
     // await prisma.$transaction([
     await prisma.analysis.create({
       data: {
-        userId: userId,
-        result: text || "", // Ensure result text is not undefined
+        User: {
+          connect: {
+            userId,
+          },
+        },
+        result: text,
       },
     });
     await prisma.user.update({
@@ -63,10 +76,15 @@ export async function POST(request: Request) {
     });
     // ]);
 
-    // return NextResponse.json({ analysis, message: "anaylsis fetched successfully", result, text }, { status: 200 });
-    return NextResponse.json({ analysis, message: "anaylsis fetched successfully" }, { status: 200 });
+    return NextResponse.json(
+      { analysis, message: "anaylsis fetched successfully" },
+      { status: 200 }
+    );
   } catch (error) {
     console.log("Error generating analysis:", error);
-    return NextResponse.json({ message: "Error generating analysis" }, { status: 500 });
+    return NextResponse.json(
+      { message: "Error generating analysis" },
+      { status: 500 }
+    );
   }
 }
