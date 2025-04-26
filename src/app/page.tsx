@@ -97,11 +97,11 @@ const Home = () => {
               An AI-powered emotional support companion that adapts to your
               needs, providing comfort and connection when you need it most.
             </p>
-            <a href="https://drive.google.com/file/d/1Lf50V5_5wYuGk0eLQsYkgom6kB55zQmY/view?usp=sharing" target="_blank" rel="noopener noreferrer">
+            {/* <a href="https://drive.google.com/file/d/1Lf50V5_5wYuGk0eLQsYkgom6kB55zQmY/view?usp=sharing" target="_blank" rel="noopener noreferrer"> */}
             <RainbowButton>
-              Download Now
+              Get Started
               </RainbowButton>
-            </a>
+            {/* </a> */}
             
             <div className="flex flex-col sm:flex-row justify-center gap-4 w-full max-w-md">
              

@@ -12,6 +12,7 @@
     "@ai-sdk/google": "^1.2.13",
     "@clerk/nextjs": "^6.18.0",
     "@google/generative-ai": "^0.24.0",
+    "@nanostores/react": "ai/react",
     "@prisma/client": "6.6.0",
     "@react-three/drei": "^10.0.7",
     "@tabler/icons-react": "^3.31.0",

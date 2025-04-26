@@ -203,7 +203,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: 'Home', href: '/' },
   { label: 'About', href: '/about' },
-  { label: 'Features', href: '/features' },
+  { label: 'chat', href: '/chat' },
   { label: 'Community', href: '/community' },
   { label: 'Contact', href: '/contact' },
 ];

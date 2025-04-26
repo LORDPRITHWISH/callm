@@ -11,23 +11,35 @@ export async function POST(req: Request) {
   const { userId } = await auth();
 
   if (!userId) {
-    return NextResponse.json({ message: "User not authenticated" }, { status: 401 });
+    return NextResponse.json(
+      { message: "User not authenticated" },
+      { status: 401 }
+    );
   }
 
+  const user = await prisma.user.findFirst({
+    where: {
+      userId,
+    },
+    select: {
+      userId: true,
+      id: true,
+    },
+  });
+  console.log(user);
+  console.log(user?.id);
   const analysis = await prisma.analysis.findFirst({
-    where: { userId },
+    where: {
+      userId: user?.id,
+    },
     select: { result: true },
   });
 
   if (!analysis) {
-<<<<<<< Updated upstream
-    return NextResponse.json({ message: "No analysis found for user" }, { status: 404 });
-=======
     return NextResponse.json(
       { message: "No analysis found for user" },
       { status: 404 }
     );
->>>>>>> Stashed changes
   }
 
   const result = streamText({
